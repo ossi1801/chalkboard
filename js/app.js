@@ -246,6 +246,7 @@
         left: cx - 280,
         top: cy - 210,
         fontFamily: fontStack,
+        fontMode: 'chalk',
         fontSize: 28,
         fontWeight: 'bold',
         fill: '#f8fafc',
@@ -261,6 +262,7 @@
           left: cx - 235,
           top: cy - 168,
           fontFamily: window.Chalkboard.Properties.getFontStack('sans'),
+          fontMode: 'sans',
           fontSize: 15,
           fill: '#94a3b8',
           shapeKind: 'text',
@@ -290,6 +292,7 @@
         left: cx - 292,
         top: cy - 72,
         fontFamily: fontStack,
+        fontMode: 'chalk',
         fontSize: 15,
         lineHeight: 1.3,
         fill: '#f8fafc',
@@ -318,6 +321,7 @@
         left: cx + 2,
         top: cy - 55,
         fontFamily: fontStack,
+        fontMode: 'chalk',
         fontSize: 16,
         textAlign: 'center',
         fill: '#fde047',
@@ -375,6 +379,7 @@
           width: 215,
           fontSize: 15,
           fontFamily: fontStack,
+          fontMode: 'chalk',
           fill: '#0f172a',
           backgroundColor: '#fef08a',
           padding: 14,
@@ -410,6 +415,7 @@
       window.Chalkboard.HistoryManager.isRestoring = false;
       this.applyToolModeToObjects();
       canvas.requestRenderAll();
+      window.Chalkboard.Properties.ensureFontsLoaded();
       window.Chalkboard.HistoryManager.pushState(true);
     },
 

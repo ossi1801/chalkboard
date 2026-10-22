@@ -137,9 +137,14 @@
           }
         });
 
+        if (window.Chalkboard.Properties) {
+          window.Chalkboard.Properties.refreshCanvasFonts();
+          window.Chalkboard.Properties.ensureFontsLoaded();
+        }
+
         this.isRestoring = false;
         this.updateButtons();
-        this.saveToLocalStorage(typeof snapshotStr === 'string' ? snapshotStr : JSON.stringify(parsed));
+        this.saveToLocalStorage(this.serializeCanvas());
 
         if (window.Chalkboard.App) {
           window.Chalkboard.App.applyToolModeToObjects();

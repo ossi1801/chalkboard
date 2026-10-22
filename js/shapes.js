@@ -361,6 +361,7 @@
           width: 190,
           fontSize: 18,
           fontFamily: window.Chalkboard.Properties.getFontStack('chalk'),
+          fontMode: 'chalk',
           fill: '#0f172a',
           backgroundColor: noteFill,
           padding: 14,

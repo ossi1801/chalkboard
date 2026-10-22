@@ -4,8 +4,8 @@
   window.Chalkboard = window.Chalkboard || {};
 
   const FONT_STACKS = {
-    chalk: '"Comic Sans MS", "Bradley Hand", "Chalkboard SE", "Segoe Print", cursive, sans-serif',
-    sans: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif',
+    chalk: '"Kalam", "Shantell Sans", "Patrick Hand", "Caveat", sans-serif',
+    sans: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     mono: '"JetBrains Mono", "Fira Code", "SFMono-Regular", Consolas, monospace',
   };
 
@@ -28,10 +28,75 @@
       this.canvas = canvas;
       this.bindUI();
       this.bindSelectionSync();
+      this.ensureFontsLoaded();
     },
 
     getFontStack(mode) {
       return FONT_STACKS[mode] || FONT_STACKS.chalk;
+    },
+
+    isLegacyChalkFont(fontFamily) {
+      if (typeof fontFamily !== 'string') return false;
+      return (
+        fontFamily.includes('Comic Sans') ||
+        fontFamily.includes('Chalkboard SE') ||
+        fontFamily.includes('Bradley Hand') ||
+        fontFamily.includes('URW Chancery') ||
+        fontFamily.includes('cursive')
+      );
+    },
+
+    refreshCanvasFonts() {
+      if (!this.canvas) return;
+      if (window.fabric && fabric.util && typeof fabric.util.clearFabricFontCache === 'function') {
+        fabric.util.clearFabricFontCache();
+      }
+      const updateObjFont = (obj) => {
+        if (!obj) return;
+        if (obj.type === 'group' && typeof obj.getObjects === 'function') {
+          obj.getObjects().forEach(updateObjFont);
+          return;
+        }
+        if (obj.type === 'i-text' || obj.type === 'textbox' || obj.type === 'text') {
+          if (obj.fontMode === 'chalk' || this.isLegacyChalkFont(obj.fontFamily)) {
+            obj.set({
+              fontMode: 'chalk',
+              fontFamily: this.getFontStack('chalk'),
+            });
+          } else if (obj.fontMode && FONT_STACKS[obj.fontMode]) {
+            obj.set('fontFamily', this.getFontStack(obj.fontMode));
+          }
+          obj.dirty = true;
+          if (typeof obj.initDimensions === 'function') {
+            obj.initDimensions();
+          }
+          if (typeof obj.setCoords === 'function') {
+            obj.setCoords();
+          }
+        }
+      };
+
+      this.canvas.getObjects().forEach(updateObjFont);
+      this.canvas.requestRenderAll();
+    },
+
+    ensureFontsLoaded() {
+      if (!document.fonts || typeof document.fonts.load !== 'function') return;
+      const fontSpecs = [
+        '400 24px "Kalam"',
+        '700 28px "Kalam"',
+        '400 24px "Shantell Sans"',
+        '400 24px "Patrick Hand"',
+        '600 24px "Caveat"',
+      ];
+      Promise.allSettled(fontSpecs.map((spec) => document.fonts.load(spec)))
+        .then(() => document.fonts.ready)
+        .then(() => {
+          this.refreshCanvasFonts();
+        })
+        .catch(() => {
+          this.refreshCanvasFonts();
+        });
     },
 
     getDashArray(dashMode, width) {
@@ -300,6 +365,9 @@
                 fontMode: fMode,
                 fontFamily: this.getFontStack(fMode),
               });
+              obj.dirty = true;
+              if (typeof obj.initDimensions === 'function') obj.initDimensions();
+              if (typeof obj.setCoords === 'function') obj.setCoords();
             }
           });
         });
@@ -370,6 +438,11 @@
           const fLabel = document.getElementById('label-font-size');
           if (fSlider) fSlider.value = sz;
           if (fLabel) fLabel.textContent = `${sz}px`;
+
+          const fMode = obj.fontMode || 'chalk';
+          document.querySelectorAll('#font-family-group .seg-btn').forEach((btn) => {
+            btn.classList.toggle('active', btn.getAttribute('data-font') === fMode);
+          });
         }
       };
 
