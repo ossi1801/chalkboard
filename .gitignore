@@ -1,0 +1,19 @@
+# OS and Editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Electron packaging / build outputs (only when packaging desktop binaries)
+node_modules/
+dist/
+out/
+build/
+*.log
+
+# Brag intermediate/build files (keep only finished mp4)
+brag-output/*
+!brag-output/*.mp4
