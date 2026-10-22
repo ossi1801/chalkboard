@@ -1,0 +1,70 @@
+{
+  "name": "chalkboard",
+  "productName": "Chalkboard",
+  "version": "1.0.0",
+  "description": "Infinite blackboard paint & diagramming app powered by Fabric.js (inspired by KDE Drawy & Excalidraw)",
+  "main": "electron/main.js",
+  "author": "Chalkboard Contributors",
+  "license": "GPL-3.0",
+  "scripts": {
+    "electron:start": "electron .",
+    "electron:pack": "electron-builder --dir",
+    "electron:dist": "electron-builder -mwl",
+    "electron:win": "electron-builder --win portable",
+    "electron:linux": "electron-builder --linux AppImage tar.gz",
+    "electron:mac": "electron-builder --mac dmg zip"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "org.chalkboard.app",
+    "productName": "Chalkboard",
+    "files": [
+      "index.html",
+      "css/**/*",
+      "js/**/*",
+      "lib/**/*",
+      "assets/**/*",
+      "electron/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "artifactName": "${productName}-${version}-Win11-${arch}-Portable.${ext}"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        },
+        {
+          "target": "tar.gz",
+          "arch": ["x64"]
+        }
+      ],
+      "category": "Graphics",
+      "artifactName": "${productName}-${version}-Linux-${arch}.${ext}"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["universal"]
+        },
+        {
+          "target": "zip",
+          "arch": ["universal"]
+        }
+      ],
+      "category": "public.app-category.graphics-design",
+      "artifactName": "${productName}-${version}-macOS-${arch}.${ext}"
+    }
+  }
+}

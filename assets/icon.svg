@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="boardGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1e2923"/>
+      <stop offset="100%" stop-color="#111714"/>
+    </linearGradient>
+    <linearGradient id="frameGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#c48a47"/>
+      <stop offset="100%" stop-color="#8a5a26"/>
+    </linearGradient>
+    <filter id="chalkGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur stdDeviation="1.2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <!-- Wooden Frame -->
+  <rect x="6" y="10" width="116" height="108" rx="14" fill="url(#frameGrad)"/>
+  <!-- Blackboard Surface -->
+  <rect x="14" y="18" width="100" height="92" rx="8" fill="url(#boardGrad)"/>
+  <!-- Chalk Drawings -->
+  <g filter="url(#chalkGlow)" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <rect x="26" y="32" width="32" height="24" rx="3" stroke="#7dd3fc" stroke-width="3.5" stroke-dasharray="1 0"/>
+    <circle cx="88" cy="44" r="13" stroke="#fde047" stroke-width="3.5"/>
+    <path d="M30 82 Q 52 62, 74 78 T 100 68" stroke="#f8fafc" stroke-width="4"/>
+    <path d="M62 44 L71 44" stroke="#f472b6" stroke-width="3"/>
+    <polyline points="67,39 72,44 67,49" stroke="#f472b6" stroke-width="3"/>
+  </g>
+  <!-- Chalk piece on ledge -->
+  <rect x="78" y="96" width="24" height="6" rx="2" fill="#f8fafc" transform="rotate(-8 90 99)"/>
+</svg>

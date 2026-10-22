@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="slate">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Chalkboard — Infinite Blackboard &amp; Diagramming</title>
+  <meta name="description" content="A blackboard paint and infinite whiteboard app powered by Fabric.js, inspired by KDE Drawy and Excalidraw." />
+  <link rel="icon" type="image/svg+xml" href="./assets/icon.svg" />
+  <link rel="stylesheet" href="./css/styles.css" />
+</head>
+<body>
+  <!-- Infinite Canvas Viewport -->
+  <div id="canvas-container" aria-label="Drawing Canvas">
+    <canvas id="chalkboard-canvas"></canvas>
+    <!-- Laser pointer & HUD overlay canvas -->
+    <canvas id="hud-canvas"></canvas>
+  </div>
+
+  <!-- Top Navigation & Floating Toolbar -->
+  <header class="top-bar" role="toolbar" aria-label="Main Toolbar">
+    <!-- Left Menu & Board Title -->
+    <div class="top-left-group">
+      <div class="dropdown-wrapper">
+        <button id="btn-menu" class="icon-btn panel-surface" title="Menu &amp; File Actions" aria-label="Menu">
+          <svg viewBox="0 0 24 24" width="18" height="18"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+        <div id="menu-dropdown" class="dropdown-menu panel-surface hidden">
+          <div class="menu-section-title">File &amp; Project</div>
+          <button class="menu-item" id="menu-open-json">
+            <span>Open Project (.chalkboard)...</span>
+            <kbd>Ctrl+O</kbd>
+          </button>
+          <button class="menu-item" id="menu-save-json">
+            <span>Save Project (.chalkboard)</span>
+            <kbd>Ctrl+S</kbd>
+          </button>
+          <div class="menu-divider"></div>
+          <div class="menu-section-title">Export Image</div>
+          <button class="menu-item" id="menu-export-png">
+            <span>Export as PNG...</span>
+            <kbd>Ctrl+Shift+E</kbd>
+          </button>
+          <button class="menu-item" id="menu-export-svg">
+            <span>Export as SVG</span>
+          </button>
+          <button class="menu-item" id="menu-copy-png">
+            <span>Copy Canvas as PNG</span>
+            <kbd>Ctrl+Alt+C</kbd>
+          </button>
+          <div class="menu-divider"></div>
+          <div class="menu-section-title">Board Surface</div>
+          <div class="theme-pills" id="theme-selector">
+            <button class="theme-pill active" data-theme-val="slate" title="Classic Slate Blackboard">Slate</button>
+            <button class="theme-pill" data-theme-val="greenboard" title="School Green Chalkboard">Green</button>
+            <button class="theme-pill" data-theme-val="obsidian" title="Obsidian Dark">Dark</button>
+            <button class="theme-pill" data-theme-val="whiteboard" title="Excalidraw Light Whiteboard">Light</button>
+          </div>
+          <div class="menu-section-title">Grid Pattern</div>
+          <div class="theme-pills" id="grid-selector">
+            <button class="theme-pill active" data-grid-val="dots">Dots</button>
+            <button class="theme-pill" data-grid-val="lines">Grid</button>
+            <button class="theme-pill" data-grid-val="ruled">Ruled</button>
+            <button class="theme-pill" data-grid-val="none">None</button>
+          </div>
+          <div class="menu-divider"></div>
+          <button class="menu-item" id="menu-load-demo">
+            <span>Load Welcome Sample</span>
+          </button>
+          <button class="menu-item danger" id="menu-clear-canvas">
+            <span>Clear Entire Board</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="board-brand panel-surface">
+        <img src="./assets/icon.svg" alt="" width="22" height="22" />
+        <input id="board-title" type="text" value="Untitled Chalkboard" aria-label="Board Title" spellcheck="false" />
+      </div>
+    </div>
+
+    <!-- Center Excalidraw/Drawy Tool Dock -->
+    <nav class="tool-dock panel-surface" aria-label="Drawing Tools">
+      <button class="tool-btn" id="btn-lock-tool" data-action="lock-tool" title="Keep selected tool active after drawing (Q)">
+        <svg viewBox="0 0 24 24" width="16" height="16"><rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="2" fill="none"/><path d="M8 11V7a4 4 0 018 0v4" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+      </button>
+      <div class="dock-sep"></div>
+
+      <button class="tool-btn" data-tool="pan" title="Hand / Pan Tool (H or Space+Drag)">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path d="M18 11V6a2 2 0 00-4 0v5m0 0V4a2 2 0 00-4 0v7m0 0V6a2 2 0 00-4 0v9a6 6 0 006 6h2a6 6 0 006-6v-5a2 2 0 00-4 0v1" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="shortcut-hint">H</span>
+      </button>
+
+      <button class="tool-btn active" data-tool="select" title="Selection Tool (V or 1)">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path d="M4 3l7 18 2.8-7.2L21 11 4 3z" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linejoin="round"/></svg>
+        <span class="shortcut-hint">1</span>
+      </button>
+
+      <div class="dock-sep"></div>
+
+      <!-- Fabric.js Brushes -->
+      <button class="tool-btn" data-tool="chalk" title="Chalk Brush — Textured Blackboard Chalk (C or 2)">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linejoin="round"/><path d="M14 6l3 3" stroke="currentColor" stroke-width="1.8"/></svg>
+        <span class="shortcut-hint">2</span>
+      </button>
+
+      <button class="tool-btn" data-tool="pen" title="Pressure-Sensitive Pen / Stylus Brush (B or 3)">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 19l7-7 3 3-7 7-3-3z" stroke="currentColor" stroke-width="1.8" fill="none"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5zM2 2l7.5 7.5" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="shortcut-hint">3</span>
+      </button>
+
+      <button class="tool-btn" data-tool="spray" title="Chalk Dust / Spray Brush (S or 4)">
+        <svg viewBox="0 0 24 24" width="18" height="18"><rect x="11" y="10" width="8" height="11" rx="1.5" stroke="currentColor" stroke-width="1.8" fill="none"/><path d="M13 10V7h4v3M7 6h.01M4 4h.01M4 8h.01M7 9h.01M9 5h.01" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+        <span class="shortcut-hint">4</span>
+      </button>
+
+      <button class="tool-btn" data-tool="highlighter" title="Chisel Highlighter Marker (M or 5)">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path d="M9 11l-6 6v3h9l3-3M22 12l-4.6 4.6a2 2 0 01-2.8 0l-5.2-5.2a2 2 0 010-2.8L14 4" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="shortcut-hint">5</span>
+      </button>
+
+      <button class="tool-btn" data-tool="eraser" title="Eraser Tool (E or 6)">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path d="M20 20H7L3 16a1.5 1.5 0 010-2.1l10-10a1.5 1.5 0 012.1 0l6.4 6.4a1.5 1.5 0 010 2.1L13 20" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="shortcut-hint">6</span>
+      </button>
+
+      <div class="dock-sep"></div>
+
+      <!-- Diagramming & Shapes -->
+      <button class="tool-btn" data-tool="rect" title="Rectangle (R or 7)">
+        <svg viewBox="0 0 24 24" width="18" height="18"><rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.8" fill="none"/></svg>
+        <span class="shortcut-hint">7</span>
+      </button>
+
+      <button class="tool-btn" data-tool="diamond" title="Diamond (D or 8)">
+        <svg viewBox="0 0 24 24" width="18" height="18"><polygon points="12,3 21,12 12,21 3,12" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linejoin="round"/></svg>
+        <span class="shortcut-hint">8</span>
+      </button>
+
+      <button class="tool-btn" data-tool="ellipse" title="Ellipse / Circle (O or 9)">
+        <svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.8" fill="none"/></svg>
+        <span class="shortcut-hint">9</span>
+      </button>
+
+      <button class="tool-btn" data-tool="arrow" title="Arrow Connector (A or 0)">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path d="M5 19L19 5M19 5H9M19 5v10" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="shortcut-hint">0</span>
+      </button>
+
+      <button class="tool-btn" data-tool="line" title="Line (L)">
+        <svg viewBox="0 0 24 24" width="18" height="18"><line x1="5" y1="19" x2="19" y2="5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span class="shortcut-hint">L</span>
+      </button>
+
+      <div class="dock-sep"></div>
+
+      <button class="tool-btn" data-tool="text" title="Text Label (T)">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path d="M4 7V4h16v3M9 20h6M12 4v16" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="shortcut-hint">T</span>
+      </button>
+
+      <button class="tool-btn" data-tool="sticky" title="Sticky Note Card (N)">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path d="M15.5 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V8.5L15.5 3z" stroke="currentColor" stroke-width="1.8" fill="none"/><polyline points="15,3 15,9 21,9" stroke="currentColor" stroke-width="1.8" fill="none"/></svg>
+        <span class="shortcut-hint">N</span>
+      </button>
+
+      <button class="tool-btn" data-tool="image" title="Insert Image (I or Drag &amp; Drop)">
+        <svg viewBox="0 0 24 24" width="18" height="18"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.8" fill="none"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/><path d="M21 15l-5-5L5 21" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="shortcut-hint">I</span>
+      </button>
+
+      <button class="tool-btn" data-tool="laser" title="Laser Pointer for Presentations (K)">
+        <svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="3" fill="#ef4444"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M19.1 4.9l-2.8 2.8M7.7 16.3l-2.8 2.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <span class="shortcut-hint">K</span>
+      </button>
+    </nav>
+
+    <!-- Right Quick Actions -->
+    <div class="top-right-group">
+      <button id="btn-toggle-inspector" class="icon-btn panel-surface" title="Toggle Style Inspector">
+        <svg viewBox="0 0 24 24" width="18" height="18"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.4-1.1-.3-.3-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6H16c3.3 0 6-2.7 6-6 0-5.5-4.5-9.6-10-9.6z" stroke="currentColor" stroke-width="1.8" fill="none"/></svg>
+      </button>
+      <button id="btn-export-modal" class="action-pill panel-surface" title="Export or Save Drawing">
+        <svg viewBox="0 0 24 24" width="16" height="16"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Export</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Left Style & Element Inspector Panel -->
+  <aside id="inspector-panel" class="inspector-panel panel-surface" aria-label="Properties Inspector">
+    <!-- Stroke / Chalk Color -->
+    <div class="prop-group">
+      <div class="prop-header">
+        <label>Stroke / Chalk Color</label>
+        <input type="color" id="input-stroke-color" value="#f8fafc" title="Custom Stroke Color" />
+      </div>
+      <div class="color-swatches" id="stroke-swatches">
+        <button class="swatch active" data-color="#f8fafc" style="--swatch:#f8fafc" title="Chalk White"></button>
+        <button class="swatch" data-color="#fde047" style="--swatch:#fde047" title="Chalk Yellow"></button>
+        <button class="swatch" data-color="#7dd3fc" style="--swatch:#7dd3fc" title="Sky Blue"></button>
+        <button class="swatch" data-color="#86efac" style="--swatch:#86efac" title="Mint Green"></button>
+        <button class="swatch" data-color="#fda4af" style="--swatch:#fda4af" title="Coral Pink"></button>
+        <button class="swatch" data-color="#fdba74" style="--swatch:#fdba74" title="Tangerine"></button>
+        <button class="swatch" data-color="#d8b4fe" style="--swatch:#d8b4fe" title="Lavender"></button>
+        <button class="swatch" data-color="#1e293b" style="--swatch:#1e293b" title="Charcoal Ink"></button>
+      </div>
+    </div>
+
+    <!-- Fill / Background Color -->
+    <div class="prop-group">
+      <div class="prop-header">
+        <label>Fill</label>
+        <input type="color" id="input-fill-color" value="#38bdf8" title="Custom Fill Color" />
+      </div>
+      <div class="color-swatches" id="fill-swatches">
+        <button class="swatch swatch-transparent active" data-fill="transparent" title="No Fill (Transparent)"></button>
+        <button class="swatch" data-fill="rgba(248, 250, 252, 0.18)" style="--swatch:rgba(248, 250, 252, 0.35)" title="Translucent White"></button>
+        <button class="swatch" data-fill="rgba(253, 224, 71, 0.22)" style="--swatch:rgba(253, 224, 71, 0.45)" title="Translucent Yellow"></button>
+        <button class="swatch" data-fill="rgba(125, 211, 252, 0.22)" style="--swatch:rgba(125, 211, 252, 0.45)" title="Translucent Blue"></button>
+        <button class="swatch" data-fill="rgba(134, 239, 172, 0.22)" style="--swatch:rgba(134, 239, 172, 0.45)" title="Translucent Green"></button>
+        <button class="swatch" data-fill="rgba(253, 164, 175, 0.22)" style="--swatch:rgba(253, 164, 175, 0.45)" title="Translucent Rose"></button>
+        <button class="swatch" data-fill="rgba(216, 180, 254, 0.22)" style="--swatch:rgba(216, 180, 254, 0.45)" title="Translucent Purple"></button>
+        <button class="swatch" data-fill="#fef08a" style="--swatch:#fef08a" title="Solid Sticky Yellow"></button>
+      </div>
+    </div>
+
+    <!-- Stroke Width -->
+    <div class="prop-group">
+      <div class="prop-header">
+        <label for="input-stroke-width">Stroke Width</label>
+        <span id="label-stroke-width" class="prop-val">4px</span>
+      </div>
+      <div class="segmented-row" id="stroke-width-presets">
+        <button class="seg-btn" data-width="2" title="Thin (2px)"><span class="line-preview" style="height:2px"></span></button>
+        <button class="seg-btn active" data-width="4" title="Medium (4px)"><span class="line-preview" style="height:4px"></span></button>
+        <button class="seg-btn" data-width="8" title="Bold (8px)"><span class="line-preview" style="height:7px"></span></button>
+        <button class="seg-btn" data-width="14" title="Extra Bold (14px)"><span class="line-preview" style="height:10px"></span></button>
+      </div>
+      <input type="range" id="input-stroke-width" min="1" max="48" value="4" class="range-slider" />
+    </div>
+
+    <!-- Stroke Style & Chalk Texture -->
+    <div class="prop-group">
+      <label>Stroke Style</label>
+      <div class="segmented-row" id="stroke-style-group">
+        <button class="seg-btn active" data-dash="solid" title="Solid Line">Solid</button>
+        <button class="seg-btn" data-dash="dashed" title="Dashed Line">Dashed</button>
+        <button class="seg-btn" data-dash="dotted" title="Dotted Line">Dotted</button>
+      </div>
+    </div>
+
+    <div class="prop-group">
+      <label>Chalk Texture &amp; Glow</label>
+      <div class="segmented-row" id="chalk-effect-group">
+        <button class="seg-btn" data-chalk="clean" title="Clean Crisp Vector">Clean</button>
+        <button class="seg-btn active" data-chalk="chalk" title="Soft Chalk Dust">Chalk</button>
+        <button class="seg-btn" data-chalk="heavy" title="Heavy Dusty Chalk">Dusty</button>
+      </div>
+    </div>
+
+    <!-- Edges & Arrowheads -->
+    <div class="prop-group">
+      <label>Corners &amp; Arrowheads</label>
+      <div class="segmented-row" id="corner-style-group">
+        <button class="seg-btn" data-corners="sharp" title="Sharp Edges">Sharp</button>
+        <button class="seg-btn active" data-corners="round" title="Rounded Edges">Round</button>
+        <button class="seg-btn" data-arrow-mode="single" id="btn-arrow-mode" title="Toggle Single / Double Arrowhead">1-Way</button>
+      </div>
+    </div>
+
+    <!-- Typography (Contextual or default) -->
+    <div class="prop-group" id="typography-group">
+      <div class="prop-header">
+        <label for="input-font-size">Text Size</label>
+        <span id="label-font-size" class="prop-val">24px</span>
+      </div>
+      <div class="segmented-row" id="font-family-group">
+        <button class="seg-btn active" data-font="chalk" title="Chalk / Handwritten">Chalk</button>
+        <button class="seg-btn" data-font="sans" title="Clean Sans-Serif">Sans</button>
+        <button class="seg-btn" data-font="mono" title="Code / Monospace">Mono</button>
+      </div>
+      <input type="range" id="input-font-size" min="12" max="96" value="24" class="range-slider" />
+    </div>
+
+    <!-- Opacity -->
+    <div class="prop-group">
+      <div class="prop-header">
+        <label for="input-opacity">Opacity</label>
+        <span id="label-opacity" class="prop-val">100%</span>
+      </div>
+      <input type="range" id="input-opacity" min="10" max="100" value="100" class="range-slider" />
+    </div>
+
+    <!-- Layering, Alignment & Object Actions -->
+    <div class="prop-group">
+      <label>Layer Order</label>
+      <div class="segmented-row">
+        <button class="seg-btn" id="act-send-back" title="Send to Back ([)">Back</button>
+        <button class="seg-btn" id="act-send-backward" title="Send Backward (Alt+[)">-1</button>
+        <button class="seg-btn" id="act-bring-forward" title="Bring Forward (Alt+])">+1</button>
+        <button class="seg-btn" id="act-bring-front" title="Bring to Front (])">Front</button>
+      </div>
+    </div>
+
+    <div class="prop-group">
+      <label>Align Selection</label>
+      <div class="segmented-row">
+        <button class="seg-btn" id="align-left" title="Align Left">L</button>
+        <button class="seg-btn" id="align-center" title="Align Horizontal Center">C</button>
+        <button class="seg-btn" id="align-right" title="Align Right">R</button>
+        <button class="seg-btn" id="align-top" title="Align Top">T</button>
+        <button class="seg-btn" id="align-middle" title="Align Vertical Middle">M</button>
+        <button class="seg-btn" id="align-bottom" title="Align Bottom">B</button>
+      </div>
+    </div>
+
+    <div class="prop-group">
+      <label>Actions</label>
+      <div class="segmented-row">
+        <button class="seg-btn" id="act-group" title="Group Selection (Ctrl+G)">Group</button>
+        <button class="seg-btn" id="act-ungroup" title="Ungroup (Ctrl+Shift+G)">Ungroup</button>
+        <button class="seg-btn" id="act-duplicate" title="Duplicate (Ctrl+D)">Clone</button>
+      </div>
+      <div class="segmented-row" style="margin-top:6px">
+        <button class="seg-btn" id="act-lock" title="Lock / Unlock Selected Object">Lock</button>
+        <button class="seg-btn danger-btn" id="act-delete" title="Delete Selected (Del / Backspace)">Delete</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Bottom HUD Controls -->
+  <footer class="bottom-bar">
+    <div class="bottom-left-group">
+      <!-- Zoom Controls -->
+      <div class="zoom-dock panel-surface">
+        <button id="btn-zoom-out" class="hud-btn" title="Zoom Out (Ctrl + -)" aria-label="Zoom Out">−</button>
+        <button id="btn-zoom-reset" class="hud-btn zoom-readout" title="Reset Zoom to 100% (Ctrl + 0)">100%</button>
+        <button id="btn-zoom-in" class="hud-btn" title="Zoom In (Ctrl + +)" aria-label="Zoom In">+</button>
+        <div class="dock-sep"></div>
+        <button id="btn-zoom-fit" class="hud-btn" title="Zoom to Fit All Content (Shift + 1)">Fit</button>
+      </div>
+
+      <!-- Undo / Redo -->
+      <div class="history-dock panel-surface">
+        <button id="btn-undo" class="hud-btn" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>
+          <svg viewBox="0 0 24 24" width="16" height="16"><path d="M3 7v6h6M3 13c2.5-5 8-7 13-4.5A9 9 0 0121 17" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button id="btn-redo" class="hud-btn" title="Redo (Ctrl+Y / Ctrl+Shift+Z)" aria-label="Redo" disabled>
+          <svg viewBox="0 0 24 24" width="16" height="16"><path d="M21 7v6h-6M21 13c-2.5-5-8-7-13-4.5A9 9 0 003 17" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+
+      <!-- Tablet / Stylus Pressure & Status Badge (KDE Drawy style) -->
+      <div id="status-badge" class="status-badge panel-surface" title="Pointer Coordinates &amp; Stylus Pressure">
+        <span id="coords-readout">0, 0</span>
+        <span class="dot-sep">•</span>
+        <span id="pressure-readout">Pressure: 50%</span>
+      </div>
+    </div>
+
+    <div class="bottom-right-group">
+      <button id="btn-help" class="hud-btn panel-surface help-pill" title="Keyboard Shortcuts &amp; Help (?)">
+        <span>?</span>
+      </button>
+    </div>
+  </footer>
+
+  <!-- Export Modal -->
+  <div id="export-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="export-modal-title">
+    <div class="modal-card panel-surface">
+      <div class="modal-header">
+        <h2 id="export-modal-title">Export &amp; Save Chalkboard</h2>
+        <button class="icon-btn" id="close-export-modal" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="export-options-grid">
+          <label class="checkbox-row">
+            <input type="checkbox" id="export-with-bg" checked />
+            <span>Include Board Background</span>
+          </label>
+          <label class="checkbox-row">
+            <input type="checkbox" id="export-only-selection" />
+            <span>Export Selected Objects Only</span>
+          </label>
+          <div class="scale-row">
+            <span>Resolution Scale:</span>
+            <div class="segmented-row" id="export-scale-group">
+              <button class="seg-btn" data-scale="1">1x</button>
+              <button class="seg-btn active" data-scale="2">2x (HD)</button>
+              <button class="seg-btn" data-scale="3">3x (Print)</button>
+            </div>
+          </div>
+        </div>
+        <div class="export-actions-row">
+          <button class="primary-btn" id="modal-btn-png">Download PNG</button>
+          <button class="secondary-btn" id="modal-btn-svg">Download SVG</button>
+          <button class="secondary-btn" id="modal-btn-copy">Copy PNG</button>
+          <button class="secondary-btn" id="modal-btn-json">Save .chalkboard</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Keyboard Shortcuts & About Modal -->
+  <div id="help-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="help-modal-title">
+    <div class="modal-card panel-surface modal-wide">
+      <div class="modal-header">
+        <h2 id="help-modal-title">Keyboard Shortcuts &amp; Guide</h2>
+        <button class="icon-btn" id="close-help-modal" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body shortcuts-grid">
+        <div>
+          <h3>Tools</h3>
+          <ul class="shortcut-list">
+            <li><span>Select / Move</span><kbd>V</kbd> or <kbd>1</kbd></li>
+            <li><span>Chalk Brush</span><kbd>C</kbd> or <kbd>2</kbd></li>
+            <li><span>Pressure Pen (Tablet)</span><kbd>B</kbd> or <kbd>3</kbd></li>
+            <li><span>Chalk Dust Spray</span><kbd>S</kbd> or <kbd>4</kbd></li>
+            <li><span>Highlighter Marker</span><kbd>M</kbd> or <kbd>5</kbd></li>
+            <li><span>Eraser</span><kbd>E</kbd> or <kbd>6</kbd></li>
+            <li><span>Rectangle</span><kbd>R</kbd> or <kbd>7</kbd></li>
+            <li><span>Diamond</span><kbd>D</kbd> or <kbd>8</kbd></li>
+            <li><span>Ellipse / Circle</span><kbd>O</kbd> or <kbd>9</kbd></li>
+            <li><span>Arrow / Line</span><kbd>A</kbd> / <kbd>L</kbd></li>
+            <li><span>Text / Sticky Note</span><kbd>T</kbd> / <kbd>N</kbd></li>
+            <li><span>Insert Image / Laser</span><kbd>I</kbd> / <kbd>K</kbd></li>
+            <li><span>Hand Pan Tool</span><kbd>H</kbd> or <kbd>Space+Drag</kbd></li>
+          </ul>
+        </div>
+        <div>
+          <h3>Canvas &amp; Editing</h3>
+          <ul class="shortcut-list">
+            <li><span>Undo / Redo</span><kbd>Ctrl+Z</kbd> / <kbd>Ctrl+Y</kbd></li>
+            <li><span>Copy / Paste</span><kbd>Ctrl+C</kbd> / <kbd>Ctrl+V</kbd></li>
+            <li><span>Duplicate Selection</span><kbd>Ctrl+D</kbd></li>
+            <li><span>Group / Ungroup</span><kbd>Ctrl+G</kbd> / <kbd>Ctrl+Shift+G</kbd></li>
+            <li><span>Bring to Front / Back</span><kbd>]</kbd> / <kbd>[</kbd></li>
+            <li><span>Select All</span><kbd>Ctrl+A</kbd></li>
+            <li><span>Delete Selected</span><kbd>Del</kbd> or <kbd>Backspace</kbd></li>
+            <li><span>Zoom In / Out / Reset</span><kbd>Ctrl++</kbd> / <kbd>Ctrl+-</kbd> / <kbd>Ctrl+0</kbd></li>
+            <li><span>Zoom to Fit Content</span><kbd>Shift+1</kbd></li>
+            <li><span>Save / Open Project</span><kbd>Ctrl+S</kbd> / <kbd>Ctrl+O</kbd></li>
+            <li><span>Constrain Proportions</span>Hold <kbd>Shift</kbd></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+  <!-- Hidden File Inputs -->
+  <input type="file" id="file-input-image" accept="image/*" class="hidden" />
+  <input type="file" id="file-input-json" accept=".chalkboard,.json,application/json" class="hidden" />
+
+  <!-- Static Fabric.js Library + Application Scripts (No Node.js required) -->
+  <script src="./lib/fabric.min.js"></script>
+  <script src="./js/canvas.js"></script>
+  <script src="./js/history.js"></script>
+  <script src="./js/brushes.js"></script>
+  <script src="./js/shapes.js"></script>
+  <script src="./js/properties.js"></script>
+  <script src="./js/actions.js"></script>
+  <script src="./js/export.js"></script>
+  <script src="./js/shortcuts.js"></script>
+  <script src="./js/app.js"></script>
+</body>
+</html>
