@@ -48,14 +48,31 @@
       bindClick('modal-btn-json', () => this.saveProjectJSON());
 
       // Top menu shortcuts
+      const closeDropdown = () => {
+        const dd = document.getElementById('menu-dropdown');
+        if (dd) dd.classList.add('hidden');
+      };
       bindClick('menu-open-json', () => {
+        closeDropdown();
         const input = document.getElementById('file-input-json');
         if (input) input.click();
       });
-      bindClick('menu-save-json', () => this.saveProjectJSON());
-      bindClick('menu-export-png', () => this.exportPNG({ withBg: true, onlySelection: false, scale: 2 }));
-      bindClick('menu-export-svg', () => this.exportSVG({ withBg: true }));
-      bindClick('menu-copy-png', () => this.copyPNGToClipboard({ withBg: true, onlySelection: false, scale: 2 }));
+      bindClick('menu-save-json', () => {
+        closeDropdown();
+        this.saveProjectJSON();
+      });
+      bindClick('menu-export-png', () => {
+        closeDropdown();
+        this.exportPNG({ withBg: true, onlySelection: false, scale: 2 });
+      });
+      bindClick('menu-export-svg', () => {
+        closeDropdown();
+        this.exportSVG({ withBg: true });
+      });
+      bindClick('menu-copy-png', () => {
+        closeDropdown();
+        this.copyPNGToClipboard({ withBg: true, onlySelection: false, scale: 2 });
+      });
 
       const jsonInput = document.getElementById('file-input-json');
       if (jsonInput) {
@@ -168,7 +185,9 @@
 
     exportPNG(opts = {}) {
       const dataUrl = this.generatePNGDataURL(opts);
-      this.triggerDownload(dataUrl, `${this.getSanitizedTitle()}.png`);
+      const activeTab = window.Chalkboard.TabManager && window.Chalkboard.TabManager.getActiveTab();
+      const suffix = activeTab ? `-${activeTab.name.trim().toLowerCase().replace(/[^a-z0-9-_]+/g, '-')}` : '';
+      this.triggerDownload(dataUrl, `${this.getSanitizedTitle()}${suffix}.png`);
       window.Chalkboard.App.showToast('Exported PNG image');
     },
 
@@ -188,7 +207,9 @@
 
       const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
       const url = URL.createObjectURL(blob);
-      this.triggerDownload(url, `${this.getSanitizedTitle()}.svg`);
+      const activeTab = window.Chalkboard.TabManager && window.Chalkboard.TabManager.getActiveTab();
+      const suffix = activeTab ? `-${activeTab.name.trim().toLowerCase().replace(/[^a-z0-9-_]+/g, '-')}` : '';
+      this.triggerDownload(url, `${this.getSanitizedTitle()}${suffix}.svg`);
       setTimeout(() => URL.revokeObjectURL(url), 3000);
       window.Chalkboard.App.showToast('Exported SVG vector');
     },
@@ -222,6 +243,12 @@
       const reader = new FileReader();
       reader.onload = (e) => {
         if (!e.target || !e.target.result) return;
+        if (window.Chalkboard.TabManager) {
+          const ok = window.Chalkboard.TabManager.loadWorkbookFromJSON(e.target.result, () => {
+            window.Chalkboard.App.showToast(`Loaded ${file.name}`);
+          });
+          if (ok) return;
+        }
         window.Chalkboard.HistoryManager.restoreSnapshot(e.target.result, () => {
           window.Chalkboard.HistoryManager.pushState(true);
           window.Chalkboard.App.showToast(`Loaded ${file.name}`);

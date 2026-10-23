@@ -17,6 +17,9 @@
 
       window.Chalkboard.Properties.init(canvas);
       window.Chalkboard.HistoryManager.init(canvas);
+      if (window.Chalkboard.TabManager) {
+        window.Chalkboard.TabManager.init(canvas);
+      }
       window.Chalkboard.BrushManager.init(canvas);
       window.Chalkboard.ShapeManager.init(canvas);
       window.Chalkboard.ObjectActions.init(canvas);
@@ -26,14 +29,54 @@
       this.bindToolbar();
       this.bindTopMenu();
       this.bindBottomBar();
+      this.initResponsiveLayout();
 
       // Load saved board from localStorage, or populate welcome sample on first visit
       const restored = window.Chalkboard.HistoryManager.loadFromLocalStorage();
       if (!restored) {
         this.loadWelcomeSample();
+        if (window.Chalkboard.TabManager) {
+          window.Chalkboard.TabManager.initDefaultSheet();
+        }
       }
 
       this.setTool('select');
+    },
+
+    isMobileViewport() {
+      return window.innerWidth <= 768;
+    },
+
+    initResponsiveLayout() {
+      const inspector = document.getElementById('inspector-panel');
+      const toggleInspectorBtn = document.getElementById('btn-toggle-inspector');
+
+      if (inspector && toggleInspectorBtn) {
+        if (this.isMobileViewport()) {
+          inspector.classList.add('hidden');
+          toggleInspectorBtn.classList.remove('active');
+        } else {
+          toggleInspectorBtn.classList.toggle('active', !inspector.classList.contains('hidden'));
+        }
+      }
+    },
+
+    onCanvasInteract() {
+      const dropdown = document.getElementById('menu-dropdown');
+      if (dropdown && !dropdown.classList.contains('hidden')) {
+        dropdown.classList.add('hidden');
+      }
+      if (window.Chalkboard.TabManager) {
+        window.Chalkboard.TabManager.closeContextMenu();
+      }
+      if (this.isMobileViewport()) {
+        const inspector = document.getElementById('inspector-panel');
+        const toggleInspectorBtn = document.getElementById('btn-toggle-inspector');
+        if (inspector && !inspector.classList.contains('hidden')) {
+          inspector.classList.add('hidden');
+          if (toggleInspectorBtn) toggleInspectorBtn.classList.remove('active');
+        }
+      }
     },
 
     bindToolbar() {
@@ -50,12 +93,35 @@
         lockBtn.addEventListener('click', () => this.toggleToolLock());
       }
 
+      const toggleToolsBtn = document.getElementById('btn-toggle-tools');
+      const toolDock = document.getElementById('main-tool-dock');
+      if (toggleToolsBtn && toolDock) {
+        toggleToolsBtn.addEventListener('click', () => {
+          const collapsed = toolDock.classList.toggle('mobile-collapsed');
+          toggleToolsBtn.classList.toggle('active', !collapsed);
+          toggleToolsBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        });
+      }
+
       const toggleInspectorBtn = document.getElementById('btn-toggle-inspector');
+      const closeInspectorBtn = document.getElementById('close-inspector-btn');
       const inspector = document.getElementById('inspector-panel');
       if (toggleInspectorBtn && inspector) {
-        toggleInspectorBtn.addEventListener('click', () => {
+        toggleInspectorBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
           inspector.classList.toggle('hidden');
-          toggleInspectorBtn.classList.toggle('active', !inspector.classList.contains('hidden'));
+          const isOpen = !inspector.classList.contains('hidden');
+          toggleInspectorBtn.classList.toggle('active', isOpen);
+          if (isOpen) {
+            const dropdown = document.getElementById('menu-dropdown');
+            if (dropdown) dropdown.classList.add('hidden');
+          }
+        });
+      }
+      if (closeInspectorBtn && inspector) {
+        closeInspectorBtn.addEventListener('click', () => {
+          inspector.classList.add('hidden');
+          if (toggleInspectorBtn) toggleInspectorBtn.classList.remove('active');
         });
       }
     },
@@ -130,6 +196,13 @@
       });
     },
 
+    setBoardTitle(val) {
+      const titleInput = document.getElementById('board-title');
+      const mobileTitleInput = document.getElementById('mobile-board-title');
+      if (titleInput) titleInput.value = val;
+      if (mobileTitleInput) mobileTitleInput.value = val;
+    },
+
     bindTopMenu() {
       const menuBtn = document.getElementById('btn-menu');
       const dropdown = document.getElementById('menu-dropdown');
@@ -137,7 +210,14 @@
       if (menuBtn && dropdown) {
         menuBtn.addEventListener('click', (e) => {
           e.stopPropagation();
+          const willOpen = dropdown.classList.contains('hidden');
           dropdown.classList.toggle('hidden');
+          if (willOpen && this.isMobileViewport()) {
+            const inspector = document.getElementById('inspector-panel');
+            const toggleInspectorBtn = document.getElementById('btn-toggle-inspector');
+            if (inspector) inspector.classList.add('hidden');
+            if (toggleInspectorBtn) toggleInspectorBtn.classList.remove('active');
+          }
         });
         window.addEventListener('click', (e) => {
           if (!dropdown.contains(e.target) && e.target !== menuBtn) {
@@ -185,9 +265,39 @@
         });
       }
 
+      const menuExportModalBtn = document.getElementById('menu-open-export-modal');
+      if (menuExportModalBtn) {
+        menuExportModalBtn.addEventListener('click', () => {
+          dropdown.classList.add('hidden');
+          const modal = document.getElementById('export-modal');
+          if (modal) modal.classList.remove('hidden');
+        });
+      }
+
+      const menuHelpBtn = document.getElementById('menu-open-help');
+      if (menuHelpBtn) {
+        menuHelpBtn.addEventListener('click', () => {
+          dropdown.classList.add('hidden');
+          const modal = document.getElementById('help-modal');
+          if (modal) modal.classList.remove('hidden');
+        });
+      }
+
       const titleInput = document.getElementById('board-title');
+      const mobileTitleInput = document.getElementById('mobile-board-title');
       if (titleInput) {
+        titleInput.addEventListener('input', () => {
+          if (mobileTitleInput) mobileTitleInput.value = titleInput.value;
+        });
         titleInput.addEventListener('change', () => {
+          window.Chalkboard.HistoryManager.scheduleSave();
+        });
+      }
+      if (mobileTitleInput) {
+        mobileTitleInput.addEventListener('input', () => {
+          if (titleInput) titleInput.value = mobileTitleInput.value;
+        });
+        mobileTitleInput.addEventListener('change', () => {
           window.Chalkboard.HistoryManager.scheduleSave();
         });
       }
@@ -227,7 +337,7 @@
       });
       this.canvas.requestRenderAll();
       window.Chalkboard.HistoryManager.pushState(true);
-      this.showToast('Cleared board');
+      this.showToast('Cleared current sheet');
     },
 
     loadWelcomeSample() {

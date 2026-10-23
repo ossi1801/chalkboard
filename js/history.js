@@ -43,7 +43,22 @@
       }, 80);
     },
 
+    serializeCanvasOnly() {
+      const json = this.canvas.toJSON();
+      if (Array.isArray(json.objects)) {
+        json.objects = json.objects.filter((o) => !o.isHelper);
+      }
+      return JSON.stringify(json);
+    },
+
     serializeCanvas() {
+      if (
+        window.Chalkboard.TabManager &&
+        window.Chalkboard.TabManager.tabs &&
+        window.Chalkboard.TabManager.tabs.length > 0
+      ) {
+        return window.Chalkboard.TabManager.serializeWorkbook();
+      }
       const json = this.canvas.toJSON();
       // Filter out temporary drawing helpers
       if (Array.isArray(json.objects)) {
@@ -60,9 +75,14 @@
 
     pushState(persistToStorage = true) {
       if (this.isRestoring) return;
-      const snapshot = this.serializeCanvas();
+      const snapshot = this.serializeCanvasOnly();
       const top = this.undoStack[this.undoStack.length - 1];
-      if (top === snapshot) return;
+      if (top === snapshot) {
+        if (persistToStorage) {
+          this.saveToLocalStorage(snapshot);
+        }
+        return;
+      }
 
       this.undoStack.push(snapshot);
       if (this.undoStack.length > MAX_HISTORY) {
@@ -70,6 +90,10 @@
       }
       this.redoStack = [];
       this.updateButtons();
+
+      if (window.Chalkboard.TabManager) {
+        window.Chalkboard.TabManager.syncCurrentTabFromCanvas(snapshot);
+      }
 
       if (persistToStorage) {
         this.saveToLocalStorage(snapshot);
@@ -81,14 +105,24 @@
       const current = this.undoStack.pop();
       this.redoStack.push(current);
       const prev = this.undoStack[this.undoStack.length - 1];
-      this.restoreSnapshot(prev);
+      this.restoreSnapshot(prev, () => {
+        if (window.Chalkboard.TabManager) {
+          window.Chalkboard.TabManager.syncCurrentTabFromCanvas(prev);
+          window.Chalkboard.TabManager.saveWorkbookToStorage();
+        }
+      });
     },
 
     redo() {
       if (this.redoStack.length === 0 || this.isRestoring) return;
       const next = this.redoStack.pop();
       this.undoStack.push(next);
-      this.restoreSnapshot(next);
+      this.restoreSnapshot(next, () => {
+        if (window.Chalkboard.TabManager) {
+          window.Chalkboard.TabManager.syncCurrentTabFromCanvas(next);
+          window.Chalkboard.TabManager.saveWorkbookToStorage();
+        }
+      });
     },
 
     restoreSnapshot(snapshotStr, callback) {
@@ -104,9 +138,8 @@
       }
 
       if (parsed.boardMeta) {
-        const titleInput = document.getElementById('board-title');
-        if (titleInput && parsed.boardMeta.title) {
-          titleInput.value = parsed.boardMeta.title;
+        if (parsed.boardMeta.title && window.Chalkboard.App) {
+          window.Chalkboard.App.setBoardTitle(parsed.boardMeta.title);
         }
         if (parsed.boardMeta.theme) {
           window.Chalkboard.CanvasManager.setTheme(parsed.boardMeta.theme);
@@ -144,7 +177,7 @@
 
         this.isRestoring = false;
         this.updateButtons();
-        this.saveToLocalStorage(this.serializeCanvas());
+        this.saveToLocalStorage();
 
         if (window.Chalkboard.App) {
           window.Chalkboard.App.applyToolModeToObjects();
@@ -162,6 +195,15 @@
     },
 
     saveToLocalStorage(snapshotStr) {
+      if (
+        window.Chalkboard.TabManager &&
+        window.Chalkboard.TabManager.tabs &&
+        window.Chalkboard.TabManager.tabs.length > 0
+      ) {
+        window.Chalkboard.TabManager.syncCurrentTabFromCanvas(snapshotStr);
+        window.Chalkboard.TabManager.saveWorkbookToStorage();
+        return;
+      }
       try {
         localStorage.setItem(STORAGE_KEY, snapshotStr || this.serializeCanvas());
       } catch (e) {
@@ -170,6 +212,9 @@
     },
 
     loadFromLocalStorage() {
+      if (window.Chalkboard.TabManager) {
+        return window.Chalkboard.TabManager.loadFromLocalStorage();
+      }
       try {
         const saved = localStorage.getItem(STORAGE_KEY);
         if (!saved) return false;

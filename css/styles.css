@@ -490,7 +490,39 @@ input[type="color"]::-webkit-color-swatch {
   cursor: pointer;
 }
 
-/* Bottom HUD */
+/* Desktop-hidden mobile elements */
+.mobile-only-menu-section,
+.mobile-tools-toggle,
+.inspector-mobile-header {
+  display: none;
+}
+
+.mobile-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px 6px;
+}
+
+#mobile-board-title {
+  flex: 1;
+  background: var(--surface-hover);
+  border: 1px solid var(--surface-border);
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  outline: none;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+#mobile-board-title:focus {
+  border-color: var(--accent);
+}
+
+/* Bottom HUD & Excel-Style Sheet Tabs */
 .bottom-bar {
   position: fixed;
   bottom: 12px;
@@ -500,6 +532,7 @@ input[type="color"]::-webkit-color-swatch {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
   pointer-events: none;
 }
 
@@ -512,6 +545,7 @@ input[type="color"]::-webkit-color-swatch {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .zoom-dock,
@@ -520,6 +554,146 @@ input[type="color"]::-webkit-color-swatch {
   align-items: center;
   padding: 3px;
   gap: 2px;
+}
+
+/* Excel-Style Sheet Tabs Bar */
+.sheet-tabs-bar {
+  display: flex;
+  align-items: center;
+  padding: 3px 5px;
+  gap: 4px;
+  max-width: min(580px, calc(100vw - 440px));
+  min-width: 140px;
+  overflow: hidden;
+}
+
+.sheet-tabs-list {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  scroll-behavior: smooth;
+}
+
+.sheet-tabs-list::-webkit-scrollbar {
+  display: none;
+}
+
+.sheet-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  padding: 0 8px 0 11px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
+}
+
+.sheet-tab:hover {
+  background: var(--surface-hover);
+  color: var(--text-main);
+}
+
+.sheet-tab.active {
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-color: var(--surface-border);
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.sheet-tab-label {
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sheet-tab-menu-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: currentColor;
+  opacity: 0.55;
+  cursor: pointer;
+}
+
+.sheet-tab-menu-btn:hover {
+  opacity: 1;
+  background: var(--surface-hover);
+}
+
+.sheet-tab-rename-input {
+  width: 96px;
+  height: 22px;
+  padding: 0 5px;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  background: var(--bg-board);
+  color: var(--text-main);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  outline: none;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.sheet-add-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px dashed var(--surface-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-main);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
+}
+
+.sheet-add-btn:hover {
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-color: var(--accent);
+  border-style: solid;
+}
+
+/* Tab Context Menu */
+.tab-context-menu {
+  position: fixed;
+  width: 168px;
+  padding: 6px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tab-context-menu .menu-item:disabled {
+  opacity: 0.38;
+  cursor: default;
 }
 
 .hud-btn {
@@ -702,7 +876,7 @@ input[type="color"]::-webkit-color-swatch {
 /* Toast */
 .toast {
   position: fixed;
-  bottom: 60px;
+  bottom: 62px;
   left: 50%;
   transform: translateX(-50%);
   background: var(--surface-bg);
@@ -715,19 +889,147 @@ input[type="color"]::-webkit-color-swatch {
   box-shadow: var(--shadow);
   z-index: 80;
   pointer-events: none;
+  white-space: nowrap;
 }
 
-@media (max-width: 900px) {
+/* Tablet & Medium Screens */
+@media (max-width: 1024px) {
   .board-brand {
     display: none;
   }
-  .tool-dock {
-    max-width: calc(100vw - 140px);
+  .mobile-only-menu-section {
+    display: block;
   }
   .status-badge {
     display: none;
   }
+  .tool-dock {
+    max-width: calc(100vw - 190px);
+  }
+  .sheet-tabs-bar {
+    max-width: calc(100vw - 320px);
+  }
+}
+
+/* Mobile Phones & Small Screens */
+@media (max-width: 768px) {
+  .top-bar {
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    gap: 6px;
+  }
+
+  .top-left-group,
+  .top-right-group {
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  /* Show tool-dock collapse button and hide Export pill (available in Hamburger Menu) */
+  .mobile-tools-toggle {
+    display: inline-flex;
+  }
+
+  #btn-export-modal {
+    display: none;
+  }
+
+  .tool-dock {
+    flex: 1;
+    max-width: calc(100vw - 142px);
+    padding: 3px 5px;
+  }
+
+  .tool-dock.mobile-collapsed {
+    display: none !important;
+  }
+
+  /* Hide keyboard shortcut badges on mobile touch screens */
+  .shortcut-hint,
+  .dropdown-menu kbd {
+    display: none;
+  }
+
+  .dropdown-menu {
+    width: min(268px, calc(100vw - 16px));
+    max-height: calc(100vh - 70px);
+    overflow-y: auto;
+  }
+
+  /* Style Inspector as a floating mobile drawer */
+  .inspector-panel {
+    top: 54px;
+    left: 8px;
+    width: min(256px, calc(100vw - 16px));
+    max-height: calc(100vh - 116px);
+    z-index: 35;
+    padding: 10px 12px 14px;
+  }
+
+  .inspector-mobile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--accent);
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--surface-border);
+  }
+
+  .inspector-close-btn {
+    width: 26px;
+    height: 26px;
+    font-size: 13px;
+  }
+
+  /* Compact Bottom Bar with Excel Sheet Tabs + Undo/Redo + Zoom */
+  .bottom-bar {
+    bottom: 8px;
+    left: 8px;
+    right: 8px;
+    gap: 6px;
+  }
+
+  .bottom-right-group,
+  .zoom-step-btn,
+  .zoom-fit-sep,
+  .zoom-fit-btn {
+    display: none;
+  }
+
+  .zoom-readout {
+    min-width: 44px;
+    padding: 0 6px;
+    font-size: 11px;
+  }
+
+  .sheet-tabs-bar {
+    flex: 1;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .sheet-tab {
+    padding: 0 6px 0 9px;
+    height: 28px;
+    font-size: 11.5px;
+  }
+
+  .sheet-tab-label {
+    max-width: 92px;
+  }
+
   .shortcuts-grid {
     grid-template-columns: 1fr;
   }
+
+  .modal-card {
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+  }
 }
+

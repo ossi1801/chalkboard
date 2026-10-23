@@ -102,6 +102,7 @@
 
       this.resizeHud();
       this.bindViewportEvents();
+      this.bindTouchGestures();
       this.bindGridRender();
       this.bindPointerTracking();
 
@@ -261,14 +262,22 @@
       // Panning via Hand tool, Spacebar + Drag, or Middle-mouse click
       canvas.on('mouse:down', (opt) => {
         const e = opt.e;
+
+        // Auto-dismiss mobile floating drawers when touching the canvas
+        if (window.Chalkboard.App && window.Chalkboard.App.onCanvasInteract) {
+          window.Chalkboard.App.onCanvasInteract();
+        }
+
         const activeTool = window.Chalkboard.App ? window.Chalkboard.App.activeTool : 'select';
         if (activeTool === 'pan' || this.spacePressed || e.button === 1) {
           this.isPanning = true;
           canvas.selection = false;
           canvas.defaultCursor = 'grabbing';
           canvas.setCursor('grabbing');
-          this.lastPanX = e.clientX;
-          this.lastPanY = e.clientY;
+          const clientX = e.touches && e.touches[0] ? e.touches[0].clientX : e.clientX;
+          const clientY = e.touches && e.touches[0] ? e.touches[0].clientY : e.clientY;
+          this.lastPanX = clientX;
+          this.lastPanY = clientY;
         }
       });
 
@@ -282,13 +291,17 @@
         this.updateStatusUI();
 
         if (this.isPanning) {
-          const vpt = canvas.viewportTransform;
-          vpt[4] += e.clientX - this.lastPanX;
-          vpt[5] += e.clientY - this.lastPanY;
-          this.lastPanX = e.clientX;
-          this.lastPanY = e.clientY;
-          canvas.setViewportTransform(vpt);
-          canvas.requestRenderAll();
+          const clientX = e.touches && e.touches[0] ? e.touches[0].clientX : e.clientX;
+          const clientY = e.touches && e.touches[0] ? e.touches[0].clientY : e.clientY;
+          if (typeof clientX === 'number' && typeof clientY === 'number') {
+            const vpt = canvas.viewportTransform;
+            vpt[4] += clientX - this.lastPanX;
+            vpt[5] += clientY - this.lastPanY;
+            this.lastPanX = clientX;
+            this.lastPanY = clientY;
+            canvas.setViewportTransform(vpt);
+            canvas.requestRenderAll();
+          }
         }
       });
 
@@ -306,6 +319,105 @@
           canvas.requestRenderAll();
         }
       });
+    },
+
+    bindTouchGestures() {
+      const container = document.getElementById('canvas-container');
+      if (!container) return;
+
+      let isTouchGesture = false;
+      let lastDist = 0;
+      let lastMidX = 0;
+      let lastMidY = 0;
+      let savedDrawingMode = false;
+
+      const getTouchMetrics = (touches) => {
+        const t0 = touches[0];
+        const t1 = touches[1];
+        const dx = t1.clientX - t0.clientX;
+        const dy = t1.clientY - t0.clientY;
+        return {
+          dist: Math.hypot(dx, dy),
+          midX: (t0.clientX + t1.clientX) / 2,
+          midY: (t0.clientY + t1.clientY) / 2,
+        };
+      };
+
+      container.addEventListener(
+        'touchstart',
+        (e) => {
+          if (e.touches.length === 2) {
+            isTouchGesture = true;
+            this.isPanning = false;
+
+            // Cancel any in-progress single-finger shape or freehand stroke
+            if (window.Chalkboard.ShapeManager && window.Chalkboard.ShapeManager.isDrawingShape) {
+              if (window.Chalkboard.ShapeManager.activeShape) {
+                this.canvas.remove(window.Chalkboard.ShapeManager.activeShape);
+                window.Chalkboard.ShapeManager.activeShape = null;
+              }
+              window.Chalkboard.ShapeManager.isDrawingShape = false;
+            }
+            savedDrawingMode = this.canvas.isDrawingMode;
+            if (this.canvas.isDrawingMode) {
+              this.canvas.isDrawingMode = false;
+            }
+
+            const metrics = getTouchMetrics(e.touches);
+            lastDist = metrics.dist;
+            lastMidX = metrics.midX;
+            lastMidY = metrics.midY;
+          }
+        },
+        { passive: true }
+      );
+
+      container.addEventListener(
+        'touchmove',
+        (e) => {
+          if (!isTouchGesture || e.touches.length !== 2) return;
+          e.preventDefault();
+
+          const metrics = getTouchMetrics(e.touches);
+          const vpt = this.canvas.viewportTransform;
+
+          // Pan by midpoint delta
+          vpt[4] += metrics.midX - lastMidX;
+          vpt[5] += metrics.midY - lastMidY;
+          this.canvas.setViewportTransform(vpt);
+
+          // Pinch zoom around midpoint
+          if (lastDist > 10 && metrics.dist > 10) {
+            const scaleFactor = metrics.dist / lastDist;
+            let zoom = this.canvas.getZoom() * scaleFactor;
+            zoom = Math.min(Math.max(zoom, 0.1), 10);
+            this.canvas.zoomToPoint({ x: metrics.midX, y: metrics.midY }, zoom);
+            this.updateZoomUI();
+          }
+
+          lastDist = metrics.dist;
+          lastMidX = metrics.midX;
+          lastMidY = metrics.midY;
+          this.canvas.requestRenderAll();
+        },
+        { passive: false }
+      );
+
+      const endTouchGesture = (e) => {
+        if (isTouchGesture && (!e.touches || e.touches.length < 2)) {
+          isTouchGesture = false;
+          if (savedDrawingMode) {
+            const tool = window.Chalkboard.App && window.Chalkboard.App.activeTool;
+            if (tool && ['chalk', 'pen', 'spray', 'highlighter'].includes(tool)) {
+              this.canvas.isDrawingMode = true;
+            }
+            savedDrawingMode = false;
+          }
+        }
+      };
+
+      container.addEventListener('touchend', endTouchGesture, { passive: true });
+      container.addEventListener('touchcancel', endTouchGesture, { passive: true });
     },
 
     bindPointerTracking() {

@@ -162,6 +162,9 @@
           document.getElementById('export-modal').classList.add('hidden');
           document.getElementById('help-modal').classList.add('hidden');
           document.getElementById('menu-dropdown').classList.add('hidden');
+          if (window.Chalkboard.TabManager) {
+            window.Chalkboard.TabManager.closeContextMenu();
+          }
           this.canvas.discardActiveObject();
           window.Chalkboard.App.setTool('select');
           this.canvas.requestRenderAll();
