@@ -182,6 +182,9 @@
         if (window.Chalkboard.App) {
           window.Chalkboard.App.applyToolModeToObjects();
         }
+        if (window.Chalkboard.ObjectActions && window.Chalkboard.ObjectActions.syncSelectionRibbon) {
+          window.Chalkboard.ObjectActions.syncSelectionRibbon();
+        }
         this.canvas.requestRenderAll();
         if (callback) callback();
       });

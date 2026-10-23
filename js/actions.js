@@ -10,6 +10,7 @@
     init(canvas) {
       this.canvas = canvas;
       this.bindUI();
+      this.bindSelectionEvents();
     },
 
     bindUI() {
@@ -35,6 +36,22 @@
       bindClick('act-duplicate', this.duplicateSelection);
       bindClick('act-lock', this.toggleLockSelection);
       bindClick('act-delete', this.deleteSelection);
+      bindClick('btn-delete-selected', this.deleteSelection);
+    },
+
+    bindSelectionEvents() {
+      const sync = () => this.syncSelectionRibbon();
+      this.canvas.on('selection:created', sync);
+      this.canvas.on('selection:updated', sync);
+      this.canvas.on('selection:cleared', sync);
+      this.canvas.on('object:removed', sync);
+    },
+
+    syncSelectionRibbon() {
+      const deleteBtn = document.getElementById('btn-delete-selected');
+      if (!deleteBtn) return;
+      const active = this.canvas && this.canvas.getActiveObject();
+      deleteBtn.classList.toggle('hidden', !active);
     },
 
     sendToBack() {
@@ -278,6 +295,7 @@
         this.canvas.discardActiveObject();
       }
 
+      this.syncSelectionRibbon();
       this.canvas.requestRenderAll();
       window.Chalkboard.HistoryManager.scheduleSave();
     },
